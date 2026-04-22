@@ -1,6 +1,8 @@
-import { ALPHA_VANTAGE_API_KEY } from '../config/env.js';
+import YahooFinance from 'yahoo-finance2';
 import { ApiError } from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
+
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 interface CacheEntry {
   price: number;
@@ -8,74 +10,51 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — Yahoo Finance has no daily limit
+
+const fetchQuote = async (ticker: string): Promise<number> => {
+  const quote = await yahooFinance.quote(ticker);
+  const price = (quote as { regularMarketPrice?: unknown }).regularMarketPrice;
+  if (typeof price !== 'number' || isNaN(price)) {
+    throw new Error(`No valid price in quote response for ${ticker}`);
+  }
+  return price;
+};
 
 export const getPrice = async (symbol: string): Promise<number> => {
   const cached = cache.get(symbol);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    const ageSeconds = ((Date.now() - cached.timestamp) / 1000).toFixed(1);
-    logger.info('alpha_vantage: cache hit', { symbol, price: cached.price, cacheAgeSeconds: Number(ageSeconds) });
+    const ageSeconds = Number(((Date.now() - cached.timestamp) / 1000).toFixed(1));
+    logger.info('yahoo_finance: cache hit', { symbol, price: cached.price, cacheAgeSeconds: ageSeconds });
     return cached.price;
   }
 
-  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-  logger.info('alpha_vantage: fetching price', { symbol });
+  logger.info('yahoo_finance: fetching price', { symbol });
 
-  let res: Response;
+  let price: number;
+
+  // Try the symbol as-is first (stocks, ETFs, funds).
+  // If that fails, retry with a -USD suffix (crypto: BTC → BTC-USD).
   try {
-    res = await fetch(url);
-  } catch (err) {
-    logger.error('alpha_vantage: network error', { symbol, err });
-    throw new ApiError(502, 'Failed to reach Alpha Vantage (network error)');
+    price = await fetchQuote(symbol);
+    logger.info('yahoo_finance: price fetched', { symbol, ticker: symbol, price });
+  } catch (firstErr) {
+    const cryptoTicker = `${symbol}-USD`;
+    logger.info('yahoo_finance: retrying as crypto ticker', { symbol, cryptoTicker });
+    try {
+      price = await fetchQuote(cryptoTicker);
+      logger.info('yahoo_finance: price fetched', { symbol, ticker: cryptoTicker, price });
+    } catch (secondErr) {
+      logger.warn('yahoo_finance: symbol not found on either ticker', {
+        symbol,
+        tried: [symbol, cryptoTicker],
+        firstErr: String(firstErr),
+        secondErr: String(secondErr),
+      });
+      throw new ApiError(404, `No price data found for symbol: ${symbol}`);
+    }
   }
 
-  logger.info('alpha_vantage: response received', { symbol, status: res.status, ok: res.ok });
-
-  if (!res.ok) {
-    logger.error('alpha_vantage: non-2xx response', { symbol, status: res.status });
-    throw new ApiError(502, `Alpha Vantage returned HTTP ${res.status}`);
-  }
-
-  let data: Record<string, unknown>;
-  try {
-    data = (await res.json()) as Record<string, unknown>;
-  } catch (err) {
-    logger.error('alpha_vantage: failed to parse JSON response', { symbol, err });
-    throw new ApiError(502, 'Alpha Vantage returned an invalid response');
-  }
-
-  logger.debug('alpha_vantage: response body keys', { symbol, responseKeys: Object.keys(data) });
-
-  // Rate limit or invalid API key
-  if ('Note' in data) {
-    logger.warn('alpha_vantage: rate limit or API key note', { symbol, note: data['Note'] });
-    throw new ApiError(429, 'Alpha Vantage rate limit reached — try again in a minute');
-  }
-
-  if ('Information' in data) {
-    logger.warn('alpha_vantage: API key / plan restriction', { symbol, information: data['Information'] });
-    throw new ApiError(403, 'Alpha Vantage API key issue — check your plan or key');
-  }
-
-  const quote = (data['Global Quote'] ?? {}) as Record<string, string>;
-
-  if (!quote || Object.keys(quote).length === 0) {
-    logger.warn('alpha_vantage: empty Global Quote — symbol may not exist', { symbol, data });
-    throw new ApiError(404, `No price data found for symbol: ${symbol}`);
-  }
-
-  if (!quote['05. price']) {
-    logger.warn('alpha_vantage: Global Quote present but missing "05. price" field', { symbol, quote });
-    throw new ApiError(404, `No price data found for symbol: ${symbol}`);
-  }
-
-  const price = parseFloat(quote['05. price']);
-  if (isNaN(price)) {
-    logger.error('alpha_vantage: price field is not a valid number', { symbol, rawPrice: quote['05. price'] });
-    throw new ApiError(502, `Alpha Vantage returned invalid price for ${symbol}`);
-  }
-
-  logger.info('alpha_vantage: price fetched and cached', { symbol, price });
   cache.set(symbol, { price, timestamp: Date.now() });
   return price;
 };
