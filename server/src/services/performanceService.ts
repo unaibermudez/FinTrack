@@ -16,6 +16,7 @@ interface HoldingResult {
   currentValue: number;
   plAbsolute: number;
   plPercent: number;
+  priceError?: boolean;
 }
 
 export interface PerformanceResult {
@@ -24,6 +25,7 @@ export interface PerformanceResult {
   totalPl: number;
   totalPlPercent: number;
   holdings: HoldingResult[];
+  priceErrors?: string[];
 }
 
 export const getPerformance = async (
@@ -56,11 +58,19 @@ export const getPerformance = async (
       .filter(([, h]) => h.totalQty > 0)
       .map(async ([symbol, h]): Promise<HoldingResult> => {
         const avgCost = h.totalCost / h.totalQty;
-        const currentPrice = await getPrice(symbol);
+
+        let currentPrice = 0;
+        let priceError = false;
+        try {
+          currentPrice = await getPrice(symbol);
+        } catch {
+          priceError = true;
+        }
+
         const currentValue = currentPrice * h.totalQty;
         const costBasis = avgCost * h.totalQty;
-        const plAbsolute = currentValue - costBasis;
-        const plPercent = costBasis > 0 ? (plAbsolute / costBasis) * 100 : 0;
+        const plAbsolute = priceError ? 0 : currentValue - costBasis;
+        const plPercent = priceError || costBasis <= 0 ? 0 : (plAbsolute / costBasis) * 100;
 
         return {
           symbol,
@@ -70,14 +80,17 @@ export const getPerformance = async (
           currentValue: parseFloat(currentValue.toFixed(2)),
           plAbsolute: parseFloat(plAbsolute.toFixed(2)),
           plPercent: parseFloat(plPercent.toFixed(2)),
+          ...(priceError && { priceError: true }),
         };
       })
   );
 
-  const totalValue = results.reduce((sum, r) => sum + r.currentValue, 0);
-  const totalCost = results.reduce((sum, r) => sum + r.avgCost * r.quantity, 0);
+  const pricedResults = results.filter((r) => !r.priceError);
+  const totalValue = pricedResults.reduce((sum, r) => sum + r.currentValue, 0);
+  const totalCost = pricedResults.reduce((sum, r) => sum + r.avgCost * r.quantity, 0);
   const totalPl = totalValue - totalCost;
   const totalPlPercent = totalCost > 0 ? (totalPl / totalCost) * 100 : 0;
+  const priceErrors = results.filter((r) => r.priceError).map((r) => r.symbol);
 
   return {
     portfolioId,
@@ -85,5 +98,6 @@ export const getPerformance = async (
     totalPl: parseFloat(totalPl.toFixed(2)),
     totalPlPercent: parseFloat(totalPlPercent.toFixed(2)),
     holdings: results,
+    ...(priceErrors.length > 0 && { priceErrors }),
   };
 };

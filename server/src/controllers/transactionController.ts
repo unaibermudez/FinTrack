@@ -26,6 +26,20 @@ export const createTransaction = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const updateTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const transaction = await transactionService.updateTransaction(
+      param(req.params.id),
+      req.userId,
+      param(req.params.txId),
+      req.body
+    );
+    res.json({ transaction });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     await transactionService.deleteTransaction(param(req.params.id), req.userId, param(req.params.txId));

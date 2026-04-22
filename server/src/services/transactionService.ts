@@ -33,6 +33,22 @@ export const createTransaction = async (
   return Transaction.create({ portfolioId, ...data });
 };
 
+export const updateTransaction = async (
+  portfolioId: string,
+  userId: string,
+  txId: string,
+  data: Partial<TransactionInput>
+): Promise<ITransaction> => {
+  await assertOwnership(portfolioId, userId);
+  const tx = await Transaction.findOneAndUpdate(
+    { _id: txId, portfolioId },
+    data,
+    { new: true, runValidators: true }
+  );
+  if (!tx) throw new ApiError(404, 'Transaction not found');
+  return tx;
+};
+
 export const deleteTransaction = async (
   portfolioId: string,
   userId: string,

@@ -1,0 +1,11 @@
+date,symbol,type,quantity,price,notes
+2024-01-10,AAPL,buy,20,182.50,This row is valid
+15-02-2024,MSFT,buy,10,415.00,Row 3: wrong date format (DD-MM-YYYY instead of YYYY-MM-DD)
+2024-03-01,,buy,15,140.25,Row 4: missing symbol
+2024-04-05,NVDA,compra,8,620.00,Row 5: invalid type ("compra" instead of "buy" or "sell")
+2024-05-12,GOOGL,sell,-4,430.50,Row 6: negative quantity
+2024-06-01,BTC,buy,0.5,0,Row 7: price is zero
+2024-07-18,ETH,buy,abc,3200.00,Row 8: quantity is not a number
+2024-08-02,AMZN,sell,5,texto,Row 9: price is not a number
+2024-09-15,SOL,buy,10,155.00
+2024-10-01,MSFT,buy

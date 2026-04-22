@@ -28,5 +28,22 @@ export const createTransaction = (portfolioId: string, data: TransactionInput) =
   api.post<{ transaction: Transaction }>(`/portfolios/${portfolioId}/transactions`, data)
     .then((r) => r.data.transaction);
 
+export const updateTransaction = (portfolioId: string, txId: string, data: Partial<TransactionInput>) =>
+  api.put<{ transaction: Transaction }>(`/portfolios/${portfolioId}/transactions/${txId}`, data)
+    .then((r) => r.data.transaction);
+
 export const deleteTransaction = (portfolioId: string, txId: string) =>
   api.delete(`/portfolios/${portfolioId}/transactions/${txId}`);
+
+export interface ImportResult {
+  imported: number;
+  errors: string[];
+}
+
+export const importTransactions = (portfolioId: string, file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post<ImportResult>(`/portfolios/${portfolioId}/transactions/import`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};

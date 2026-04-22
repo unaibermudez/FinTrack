@@ -1,0 +1,14 @@
+date,symbol,type,quantity,price,notes
+2024-01-10,AAPL,buy,20,182.50,Initial position
+2024-02-15,MSFT,buy,10,415.00,Q1 purchase
+2024-03-01,GOOGL,buy,15,140.25,
+2024-03-20,NVDA,buy,8,620.00,AI momentum play
+2024-04-05,AAPL,buy,10,171.00,Averaging down
+2024-05-12,MSFT,sell,4,430.50,Partial profit taking
+2024-06-01,BTC,buy,0.5,67000,Crypto allocation
+2024-07-18,ETH,buy,3,3200.00,
+2024-08-02,NVDA,sell,3,950.00,Strong gains
+2024-09-15,AAPL,sell,5,225.00,Rebalancing
+2024-10-01,SOL,buy,25,155.00,
+2024-11-20,GOOGL,buy,5,168.00,Adding to position
+2024-12-05,BTC,buy,0.25,98000,Year-end DCA

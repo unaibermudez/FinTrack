@@ -215,6 +215,11 @@ Respuesta de performance:
 - [x] Gestión de transacciones con formulario de compra/venta
 - [x] Gráficas interactivas (PieChart allocación, BarChart P&L por activo)
 - [x] Autenticación persistente con refresh token transparente
+- [x] Edición de transacciones (modal reutilizable con datos precargados)
+- [x] Perfil de usuario (cambiar nombre, email y contraseña)
+- [x] Exportar transacciones a CSV (descarga directa en el navegador)
+- [x] Importar transacciones desde CSV (carga en bloque, validación fila a fila, plantilla descargable)
+- [x] Gráfica histórica de evolución del portfolio (AreaChart con datos por fecha de transacción)
 - [ ] Deploy en Vercel + Railway (Fase 4)
 
 ---

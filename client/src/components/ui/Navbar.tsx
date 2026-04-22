@@ -21,7 +21,9 @@ export const Navbar = () => {
             Dashboard
           </button>
           <span className="text-slate-700">|</span>
-          <span className="text-sm text-slate-500">{user?.name ?? user?.email}</span>
+          <Link to="/profile" className="text-sm text-slate-500 hover:text-slate-200 transition-colors">
+            {user?.name ?? user?.email}
+          </Link>
           <button
             onClick={logout}
             className="text-xs text-slate-500 hover:text-red-400 transition-colors cursor-pointer"

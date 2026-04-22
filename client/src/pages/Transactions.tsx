@@ -3,14 +3,16 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
 import { getPortfolio } from '../api/portfolios';
 import type { Portfolio } from '../api/portfolios';
-import type { TransactionInput } from '../api/transactions';
+import type { Transaction, TransactionInput } from '../api/transactions';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { ImportModal } from '../components/ui/ImportModal';
 import { Input } from '../components/ui/Input';
 import { Navbar } from '../components/ui/Navbar';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate, toInputDate } from '../utils/formatDate';
+import { exportToCsv } from '../utils/exportCsv';
 
 const EMPTY_FORM: TransactionInput = {
   assetSymbol: '',
@@ -25,8 +27,10 @@ export const Transactions = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const { transactions, loading, create, remove } = useTransactions(id!);
+  const { transactions, loading, create, update, remove, importCsv } = useTransactions(id!);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [form, setForm] = useState<TransactionInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -34,13 +38,31 @@ export const Transactions = () => {
     if (id) getPortfolio(id).then(setPortfolio).catch(() => navigate('/dashboard'));
   }, [id, navigate]);
 
+  const openCreate = () => { setEditingTx(null); setForm(EMPTY_FORM); setShowForm(true); };
+  const openEdit = (tx: Transaction) => {
+    setEditingTx(tx);
+    setForm({
+      assetSymbol: tx.assetSymbol,
+      type: tx.type,
+      quantity: tx.quantity,
+      priceAtTransaction: tx.priceAtTransaction,
+      date: toInputDate(tx.date),
+      notes: tx.notes ?? '',
+    });
+    setShowForm(true);
+  };
+  const closeForm = () => { setShowForm(false); setEditingTx(null); };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await create({ ...form, assetSymbol: form.assetSymbol.toUpperCase() });
-      setForm(EMPTY_FORM);
-      setShowForm(false);
+      if (editingTx) {
+        await update(editingTx._id, { ...form, assetSymbol: form.assetSymbol.toUpperCase() });
+      } else {
+        await create({ ...form, assetSymbol: form.assetSymbol.toUpperCase() });
+      }
+      closeForm();
     } finally {
       setSaving(false);
     }
@@ -57,7 +79,7 @@ export const Transactions = () => {
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
               <Link to="/dashboard" className="hover:text-slate-300 transition-colors">Portfolios</Link>
@@ -69,7 +91,20 @@ export const Transactions = () => {
               <span className="text-slate-300">Transactions</span>
             </div>
           </div>
-          <Button onClick={() => setShowForm(true)}>+ Add Transaction</Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={transactions.length === 0}
+              onClick={() => exportToCsv(`${portfolio?.name ?? 'transactions'}.csv`, transactions)}
+            >
+              Export CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
+              Import CSV
+            </Button>
+            <Button size="sm" onClick={openCreate}>+ Add Transaction</Button>
+          </div>
         </div>
 
         <Card>
@@ -80,7 +115,10 @@ export const Transactions = () => {
           ) : transactions.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 text-sm">No transactions yet.</p>
-              <Button className="mt-4" onClick={() => setShowForm(true)}>Add first transaction</Button>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <Button onClick={openCreate}>Add first transaction</Button>
+                <Button variant="secondary" onClick={() => setShowImport(true)}>Import CSV</Button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -107,12 +145,10 @@ export const Transactions = () => {
                       <td className="py-3 pr-4 text-slate-200 font-medium">{formatCurrency(tx.quantity * tx.priceAtTransaction)}</td>
                       <td className="py-3 pr-4 text-slate-500 text-xs max-w-[120px] truncate">{tx.notes ?? '—'}</td>
                       <td className="py-3">
-                        <button
-                          onClick={() => remove(tx._id)}
-                          className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none opacity-0 group-hover:opacity-100 cursor-pointer"
-                        >
-                          ×
-                        </button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openEdit(tx)} className="text-slate-500 hover:text-indigo-400 transition-colors text-xs cursor-pointer" title="Edit">✎</button>
+                          <button onClick={() => remove(tx._id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none cursor-pointer" title="Delete">×</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -123,7 +159,17 @@ export const Transactions = () => {
         </Card>
       </main>
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="New Transaction">
+      <ImportModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={importCsv}
+      />
+
+      <Modal
+        open={showForm}
+        onClose={closeForm}
+        title={editingTx ? 'Edit Transaction' : 'New Transaction'}
+      >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <Input label="Symbol" placeholder="AAPL" {...field('assetSymbol')} required />
@@ -146,8 +192,8 @@ export const Transactions = () => {
           <Input label="Date" type="date" {...field('date')} required />
           <Input label="Notes (optional)" placeholder="Optional note" {...field('notes')} />
           <div className="flex gap-2 justify-end mt-1">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Add</Button>
+            <Button variant="secondary" type="button" onClick={closeForm}>Cancel</Button>
+            <Button type="submit" loading={saving}>{editingTx ? 'Save changes' : 'Add'}</Button>
           </div>
         </form>
       </Modal>
