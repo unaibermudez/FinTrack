@@ -8,7 +8,9 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(claude mcp *)"
+      "Bash(claude mcp *)",
+      "Bash(./node_modules/.bin/tsc *)",
+      "Bash(node_modules/.bin/tsc *)"
     ]
   }
 }

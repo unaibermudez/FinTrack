@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './src/middlewares/errorHandler.js';
+import { setupSwagger } from './src/config/swagger.js';
 import authRoutes from './src/routes/authRoutes.js';
 import portfolioRoutes from './src/routes/portfolioRoutes.js';
 import assetRoutes from './src/routes/assetRoutes.js';
@@ -14,6 +15,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+setupSwagger(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/portfolios', portfolioRoutes);

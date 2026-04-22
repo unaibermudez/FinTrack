@@ -92,6 +92,18 @@ npm start        # node dist/server.js
 
 ---
 
+## Documentación interactiva (Swagger)
+
+Con el servidor en marcha, abre en el navegador:
+
+```
+http://localhost:5000/api/docs
+```
+
+La especificación OpenAPI en formato JSON está disponible en `/api/docs.json`.
+
+---
+
 ## API REST
 
 ### Autenticación

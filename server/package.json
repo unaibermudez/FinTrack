@@ -7,7 +7,11 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "tsx watch server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -27,8 +31,13 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.6.0",
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.1.4",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }
