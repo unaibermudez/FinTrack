@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, DragEvent } from 'react';
+import { useState, useCallback, useRef, type DragEvent } from 'react';
 import { Button } from './Button';
 import { CSV_TEMPLATE } from '../../utils/exportCsv';
 import type { ImportResult } from '../../api/transactions';
