@@ -1,15 +1,168 @@
 @import "tailwindcss";
 
+/* ─── Dark mode via data-theme attribute ─────────────────────────────────── */
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  /* Light mode — clean, authoritative */
+  --bg:            #F2F5FB;
+  --bg-card:       #FFFFFF;
+  --bg-input:      #F8FAFD;
+  --bg-hover:      #EBF0F8;
+  --border:        #D8E2F0;
+  --border-strong: #B0BDD4;
+
+  --text:          #0B1729;
+  --text-2:        #4A5E7A;
+  --text-3:        #8A9CB5;
+
+  --primary:       #1A56DB;
+  --primary-hover: #1541C0;
+  --primary-bg:    #EBF2FF;
+  --primary-text:  #1A56DB;
+
+  --positive:      #047857;
+  --positive-bg:   #ECFDF5;
+  --negative:      #B91C1C;
+  --negative-bg:   #FEF2F2;
+  --warning:       #B45309;
+  --warning-bg:    #FFFBEB;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 24px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.05);
+
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+[data-theme="dark"] {
+  --bg:            #07101E;
+  --bg-card:       #0D1928;
+  --bg-input:      #122036;
+  --bg-hover:      #19283E;
+  --border:        #1C2E48;
+  --border-strong: #284362;
+
+  --text:          #DDE8F5;
+  --text-2:        #5E7A9E;
+  --text-3:        #2F4262;
+
+  --primary:       #5B9BFF;
+  --primary-hover: #7BAFFF;
+  --primary-bg:    #0A1E3D;
+  --primary-text:  #5B9BFF;
+
+  --positive:      #34D399;
+  --positive-bg:   #052D1E;
+  --negative:      #F87171;
+  --negative-bg:   #2B1515;
+  --warning:       #FBBF24;
+  --warning-bg:    #2B1E04;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 10px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 14px 28px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* ─── Custom utilities ───────────────────────────────────────────────────── */
+@utility ft-bg       { background-color: var(--bg); }
+@utility ft-card     { background-color: var(--bg-card); }
+@utility ft-input-bg { background-color: var(--bg-input); }
+@utility ft-hover    { background-color: var(--bg-hover); }
+
+@utility ft-text     { color: var(--text); }
+@utility ft-text-2   { color: var(--text-2); }
+@utility ft-text-3   { color: var(--text-3); }
+
+@utility ft-border        { border-color: var(--border); }
+@utility ft-border-strong { border-color: var(--border-strong); }
+
+@utility ft-primary      { color: var(--primary); }
+@utility ft-primary-bg   { background-color: var(--primary); }
+@utility ft-primary-subtle { background-color: var(--primary-bg); }
+
+@utility ft-positive     { color: var(--positive); }
+@utility ft-negative     { color: var(--negative); }
+@utility ft-warning      { color: var(--warning); }
+@utility ft-positive-bg  { background-color: var(--positive-bg); }
+@utility ft-negative-bg  { background-color: var(--negative-bg); }
+@utility ft-warning-bg   { background-color: var(--warning-bg); }
+
+@utility ft-shadow    { box-shadow: var(--shadow-md); }
+@utility ft-shadow-sm { box-shadow: var(--shadow-sm); }
+@utility ft-shadow-lg { box-shadow: var(--shadow-lg); }
+
+@utility font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────── */
 @layer base {
-  * { box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
   body {
-    background-color: #0f1117;
-    color: #e2e8f0;
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
     margin: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root { min-height: 100vh; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+  /* Selection */
+  ::selection {
+    background-color: var(--primary-bg);
+    color: var(--primary);
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
+
+/* ─── Animation keyframes ────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in  { animation: fadeIn  0.2s ease both; }
+.animate-scale-in { animation: scaleIn 0.18s ease both; }
+.animate-slide-down { animation: slideDown 0.18s ease both; }
+
+/* Staggered children */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
