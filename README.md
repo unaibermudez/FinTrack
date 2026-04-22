@@ -72,13 +72,35 @@ El servidor arranca en `http://localhost:5000`.
 
 ### Frontend
 
-> Pendiente — Fase 3
-
 ```bash
 cd client
 npm install
-npm run dev
+npm run dev      # Vite dev server en http://localhost:5173
 ```
+
+---
+
+## Tests
+
+```bash
+cd server
+npm test                # ejecuta todos los tests (vitest run)
+npm run test:watch      # modo watch durante el desarrollo
+npm run test:coverage   # cobertura de código
+```
+
+Los tests usan `mongodb-memory-server` (base de datos en memoria, sin MongoDB real) y `supertest` para llamadas HTTP. El rate limiter se desactiva automáticamente en entorno de test.
+
+### Datos de prueba (seed)
+
+Para poblar tu base de datos de desarrollo con datos realistas:
+
+```bash
+cd server
+npm run seed
+```
+
+Crea 2 usuarios (`ana@fintrack.dev` y `carlos@fintrack.dev`, contraseña `password123`) con portfolios y transacciones de AAPL, MSFT, GOOGL, BTC, ETH, SOL y AMZN.
 
 ---
 
@@ -188,8 +210,11 @@ Respuesta de performance:
 - [x] Registro de transacciones de compra/venta
 - [x] Consulta de precios en tiempo real via Alpha Vantage (caché 60s)
 - [x] Cálculo de P&L por activo y total del portfolio (coste medio ponderado)
-- [ ] Dashboard con gráficas de evolución y distribución (Fase 3)
-- [ ] Interfaz web React (Fase 3)
+- [x] Dashboard con listado de portfolios y gestión CRUD
+- [x] Vista de portfolio con tabla de holdings, gráfica de allocación y P&L por activo
+- [x] Gestión de transacciones con formulario de compra/venta
+- [x] Gráficas interactivas (PieChart allocación, BarChart P&L por activo)
+- [x] Autenticación persistente con refresh token transparente
 - [ ] Deploy en Vercel + Railway (Fase 4)
 
 ---

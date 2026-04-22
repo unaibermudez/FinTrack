@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { JWT_ACCESS_SECRET, JWT_REFRESH_SECRET } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 import User from '../models/User.js';
@@ -16,7 +17,7 @@ export const generateAccessToken = (userId: string): string =>
   jwt.sign({ sub: userId }, JWT_ACCESS_SECRET, { expiresIn: '15m' });
 
 export const generateRefreshToken = (userId: string): string =>
-  jwt.sign({ sub: userId }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  jwt.sign({ sub: userId, jti: randomUUID() }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
 export const verifyAccessToken = (token: string): JwtPayload => {
   try {
