@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Plus, Download, Upload, Pencil, Trash2, ArrowLeft, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useTransactions } from '../hooks/useTransactions';
 import { getPortfolio } from '../api/portfolios';
 import type { Portfolio } from '../api/portfolios';
 import type { Transaction, TransactionInput } from '../api/transactions';
-import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ImportModal } from '../components/ui/ImportModal';
 import { Input } from '../components/ui/Input';
 import { Navbar } from '../components/ui/Navbar';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate, toInputDate } from '../utils/formatDate';
 import { exportToCsv } from '../utils/exportCsv';
@@ -26,13 +29,18 @@ const EMPTY_FORM: TransactionInput = {
 export const Transactions = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const { transactions, loading, create, update, remove, importCsv } = useTransactions(id!);
+
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [form, setForm] = useState<TransactionInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) getPortfolio(id).then(setPortfolio).catch(() => navigate('/dashboard'));
@@ -59,13 +67,42 @@ export const Transactions = () => {
     try {
       if (editingTx) {
         await update(editingTx._id, { ...form, assetSymbol: form.assetSymbol.toUpperCase() });
+        toast.success(t('transactions.transactionUpdated'));
       } else {
         await create({ ...form, assetSymbol: form.assetSymbol.toUpperCase() });
+        toast.success(t('transactions.transactionCreated'));
       }
       closeForm();
+    } catch {
+      toast.error(t('common.error'));
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await remove(deleteTarget._id);
+      toast.success(t('transactions.transactionDeleted'));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleExport = () => {
+    exportToCsv(`${portfolio?.name ?? 'transactions'}.csv`, transactions);
+    toast.success(t('transactions.exportSuccess'));
+  };
+
+  const handleImport = async (file: File) => {
+    const res = await importCsv(file);
+    if (res.imported > 0) toast.success(t('transactions.importSuccess', { count: res.imported }));
+    return res;
   };
 
   const field = (key: keyof TransactionInput) => ({
@@ -75,79 +112,156 @@ export const Transactions = () => {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen ft-bg">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-              <Link to="/dashboard" className="hover:text-slate-300 transition-colors">Portfolios</Link>
-              <span>/</span>
-              <Link to={`/portfolio/${id}`} className="hover:text-slate-300 transition-colors">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 text-xs ft-text-2 mb-2">
+              <Link to="/dashboard" className="hover:ft-text transition-colors flex items-center gap-1">
+                <ArrowLeft size={11} />
+                {t('portfolio.portfolios')}
+              </Link>
+              <span className="ft-text-3">/</span>
+              <Link to={`/portfolio/${id}`} className="hover:ft-text transition-colors">
                 {portfolio?.name ?? '…'}
               </Link>
-              <span>/</span>
-              <span className="text-slate-300">Transactions</span>
-            </div>
+              <span className="ft-text-3">/</span>
+              <span className="ft-text">{t('transactions.title')}</span>
+            </nav>
+            <h1 className="text-xl font-bold ft-text tracking-tight">{t('transactions.title')}</h1>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               disabled={transactions.length === 0}
-              onClick={() => exportToCsv(`${portfolio?.name ?? 'transactions'}.csv`, transactions)}
+              onClick={handleExport}
             >
-              Export CSV
+              <Download size={13} />
+              {t('transactions.exportCSV')}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
-              Import CSV
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+              <Upload size={13} />
+              {t('transactions.importCSV')}
             </Button>
-            <Button size="sm" onClick={openCreate}>+ Add Transaction</Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus size={13} strokeWidth={2.5} />
+              {t('transactions.addTransaction')}
+            </Button>
           </div>
         </div>
 
-        <Card>
+        {/* Table card */}
+        <div className="ft-card border ft-border rounded-xl ft-shadow-sm animate-fade-in" style={{ animationDelay: '40ms' }}>
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => <div key={i} className="h-10 rounded-lg bg-[#0f1117] animate-pulse" />)}
+            <div className="p-5 space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 rounded-lg ft-bg animate-pulse" />
+              ))}
             </div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-slate-500 text-sm">No transactions yet.</p>
-              <div className="flex items-center justify-center gap-3 mt-4">
-                <Button onClick={openCreate}>Add first transaction</Button>
-                <Button variant="secondary" onClick={() => setShowImport(true)}>Import CSV</Button>
+            <div className="text-center py-16 px-6">
+              <div className="w-12 h-12 rounded-2xl ft-primary-subtle flex items-center justify-center mx-auto mb-4">
+                <FileText size={20} className="ft-primary" />
+              </div>
+              <h3 className="font-semibold ft-text mb-1">{t('transactions.noTransactions')}</h3>
+              <p className="text-sm ft-text-2 mb-6">{t('transactions.noTransactionsDesc')}</p>
+              <div className="flex items-center justify-center gap-3">
+                <Button size="sm" onClick={openCreate}>
+                  <Plus size={13} />
+                  {t('transactions.addTransaction')}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
+                  <Upload size={13} />
+                  {t('transactions.importCSV')}
+                </Button>
               </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-slate-500 border-b border-[#2a2d3a]">
-                    {['Date', 'Symbol', 'Type', 'Qty', 'Price', 'Total', 'Notes', ''].map((h) => (
-                      <th key={h} className="text-left pb-2 pr-4 font-medium">{h}</th>
+                  <tr className="border-b ft-border">
+                    {[
+                      t('transactions.date'),
+                      t('transactions.symbol'),
+                      t('transactions.type'),
+                      t('transactions.quantity'),
+                      t('transactions.price'),
+                      t('transactions.total'),
+                      t('transactions.notes'),
+                      '',
+                    ].map((h, i) => (
+                      <th
+                        key={i}
+                        className={`px-4 py-3 text-left text-xs font-semibold ft-text-2 uppercase tracking-[0.07em] ${
+                          i >= 3 && i <= 5 ? 'text-right' : ''
+                        }`}
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {transactions.map((tx) => (
-                    <tr key={tx._id} className="border-b border-[#1e2130] hover:bg-white/[0.02] group">
-                      <td className="py-3 pr-4 text-slate-400 whitespace-nowrap">{formatDate(tx.date)}</td>
-                      <td className="py-3 pr-4 font-semibold text-slate-100">{tx.assetSymbol}</td>
-                      <td className="py-3 pr-4">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'buy' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {tx.type.toUpperCase()}
+                    <tr
+                      key={tx._id}
+                      className="border-b ft-border last:border-0 hover:ft-hover transition-colors group"
+                    >
+                      <td className="px-4 py-3 ft-text-2 text-xs whitespace-nowrap font-mono-num">
+                        {formatDate(tx.date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold ft-text font-mono-num text-sm tracking-wide">
+                          {tx.assetSymbol}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-slate-300">{tx.quantity}</td>
-                      <td className="py-3 pr-4 text-slate-300">{formatCurrency(tx.priceAtTransaction)}</td>
-                      <td className="py-3 pr-4 text-slate-200 font-medium">{formatCurrency(tx.quantity * tx.priceAtTransaction)}</td>
-                      <td className="py-3 pr-4 text-slate-500 text-xs max-w-[120px] truncate">{tx.notes ?? '—'}</td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openEdit(tx)} className="text-slate-500 hover:text-indigo-400 transition-colors text-xs cursor-pointer" title="Edit">✎</button>
-                          <button onClick={() => remove(tx._id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none cursor-pointer" title="Delete">×</button>
+                      <td className="px-4 py-3">
+                        <span
+                          className={[
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                            tx.type === 'buy'
+                              ? 'ft-positive-bg ft-positive'
+                              : 'ft-negative-bg ft-negative',
+                          ].join(' ')}
+                        >
+                          {tx.type === 'buy' ? t('transactions.buy') : t('transactions.sell')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 ft-text text-right font-mono-num">
+                        {tx.quantity}
+                      </td>
+                      <td className="px-4 py-3 ft-text-2 text-right font-mono-num">
+                        {formatCurrency(tx.priceAtTransaction)}
+                      </td>
+                      <td className="px-4 py-3 ft-text font-semibold text-right font-mono-num">
+                        {formatCurrency(tx.quantity * tx.priceAtTransaction)}
+                      </td>
+                      <td className="px-4 py-3 ft-text-3 text-xs max-w-[140px] truncate">
+                        {tx.notes || '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEdit(tx)}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg ft-text-3 hover:ft-primary hover:ft-primary-subtle transition-colors cursor-pointer"
+                            title={t('common.edit')}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(tx)}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg ft-text-3 hover:ft-negative hover:ft-negative-bg transition-colors cursor-pointer"
+                            title={t('common.delete')}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -156,47 +270,74 @@ export const Transactions = () => {
               </table>
             </div>
           )}
-        </Card>
+        </div>
       </main>
 
+      {/* Import modal */}
       <ImportModal
         open={showImport}
         onClose={() => setShowImport(false)}
-        onImport={importCsv}
+        onImport={handleImport}
       />
 
+      {/* Create / Edit modal */}
       <Modal
         open={showForm}
         onClose={closeForm}
-        title={editingTx ? 'Edit Transaction' : 'New Transaction'}
+        title={editingTx ? t('transactions.editTransaction') : t('transactions.addTransaction')}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Symbol" placeholder="AAPL" {...field('assetSymbol')} required />
+            <Input
+              label={t('transactions.symbol')}
+              placeholder={t('transactions.symbolPlaceholder')}
+              {...field('assetSymbol')}
+              required
+              className="uppercase"
+            />
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Type</label>
+              <label className="text-xs font-medium ft-text-2 uppercase tracking-[0.07em]">
+                {t('transactions.type')}
+              </label>
               <select
                 value={form.type}
                 onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as 'buy' | 'sell' }))}
-                className="w-full rounded-lg bg-[#1a1d27] border border-[#2a2d3a] px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full h-10 rounded-lg ft-input-bg border ft-border px-3 text-sm ft-text focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
               >
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
+                <option value="buy">{t('transactions.buy')}</option>
+                <option value="sell">{t('transactions.sell')}</option>
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Quantity" type="number" step="any" min="0" {...field('quantity')} required />
-            <Input label="Price" type="number" step="any" min="0" {...field('priceAtTransaction')} required />
+            <Input label={t('transactions.quantity')} type="number" step="any" min="0" {...field('quantity')} required />
+            <Input label={t('transactions.price')} type="number" step="any" min="0" {...field('priceAtTransaction')} required />
           </div>
-          <Input label="Date" type="date" {...field('date')} required />
-          <Input label="Notes (optional)" placeholder="Optional note" {...field('notes')} />
-          <div className="flex gap-2 justify-end mt-1">
-            <Button variant="secondary" type="button" onClick={closeForm}>Cancel</Button>
-            <Button type="submit" loading={saving}>{editingTx ? 'Save changes' : 'Add'}</Button>
+          <Input label={t('transactions.date')} type="date" {...field('date')} required />
+          <Input
+            label={t('transactions.notes')}
+            hint={t('common.optional')}
+            placeholder={t('transactions.notesPlaceholder')}
+            {...field('notes')}
+          />
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="secondary" type="button" onClick={closeForm}>{t('common.cancel')}</Button>
+            <Button type="submit" loading={saving}>
+              {editingTx ? t('common.save') : t('transactions.addTransaction')}
+            </Button>
           </div>
         </form>
       </Modal>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={t('transactions.deleteConfirmTitle')}
+        description={t('transactions.deleteConfirmDesc')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleting}
+      />
     </div>
   );
 };

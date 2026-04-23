@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, type DragEvent } from 'react';
+import { X, Upload, FileText, Download, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { CSV_TEMPLATE } from '../../utils/exportCsv';
 import type { ImportResult } from '../../api/transactions';
@@ -25,6 +27,7 @@ const formatSize = (bytes: number) =>
   bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
 
 export const ImportModal = ({ open, onClose, onImport }: Props) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('idle');
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -86,19 +89,28 @@ export const ImportModal = ({ open, onClose, onImport }: Props) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-[#1a1d27] border border-[#2a2d3a] shadow-2xl">
+      <div className="w-full max-w-lg ft-card border ft-border rounded-2xl ft-shadow-lg animate-scale-in">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2a2d3a]">
-          <h2 className="text-base font-semibold text-slate-100">Import Transactions</h2>
-          <button onClick={handleClose} className="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none cursor-pointer">×</button>
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b ft-border">
+          <div>
+            <h2 className="text-base font-semibold ft-text">Import Transactions</h2>
+            <p className="text-xs ft-text-2 mt-0.5">Upload a CSV file to bulk-import transactions</p>
+          </div>
+          <button
+            onClick={handleClose}
+            className="ft-text-3 hover:ft-text transition-colors cursor-pointer p-1.5 rounded-lg hover:ft-hover"
+          >
+            <X size={15} />
+          </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
 
-          {/* ── IDLE / SELECTED: drop zone ── */}
+          {/* IDLE / SELECTED — dropzone */}
           {(step === 'idle' || step === 'selected') && (
             <>
               <div
@@ -106,13 +118,16 @@ export const ImportModal = ({ open, onClose, onImport }: Props) => {
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors
-                  ${dragging
-                    ? 'border-indigo-500 bg-indigo-500/10'
+                className={[
+                  'relative flex flex-col items-center justify-center gap-3 rounded-xl',
+                  'border-2 border-dashed px-6 py-10 cursor-pointer',
+                  'transition-all duration-150',
+                  dragging
+                    ? 'border-[var(--primary)] bg-[var(--primary-bg)]'
                     : step === 'selected'
-                      ? 'border-indigo-500/50 bg-indigo-500/5'
-                      : 'border-[#2a2d3a] hover:border-indigo-500/50 hover:bg-white/[0.02]'
-                  }`}
+                      ? 'border-[var(--primary)]/50 bg-[var(--primary-bg)]'
+                      : 'ft-border hover:border-[var(--primary)]/40 hover:ft-hover',
+                ].join(' ')}
               >
                 <input
                   ref={fileInputRef}
@@ -124,53 +139,53 @@ export const ImportModal = ({ open, onClose, onImport }: Props) => {
 
                 {step === 'selected' && file ? (
                   <>
-                    <div className="w-12 h-12 rounded-xl bg-indigo-500/15 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                    <div className="w-12 h-12 rounded-xl ft-primary-subtle flex items-center justify-center">
+                      <FileText size={22} className="ft-primary" />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm font-medium text-slate-200">{file.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{formatSize(file.size)} — Click to change file</p>
+                      <p className="text-sm font-medium ft-text">{file.name}</p>
+                      <p className="text-xs ft-text-2 mt-0.5">{formatSize(file.size)} — Click to change</p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-xl bg-[#23263a] flex items-center justify-center">
-                      <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
+                    <div className="w-12 h-12 rounded-xl ft-hover border ft-border flex items-center justify-center">
+                      <Upload size={22} className="ft-text-3" />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-slate-300">
-                        <span className="text-indigo-400 font-medium">Click to select</span> or drag & drop
+                      <p className="text-sm ft-text-2">
+                        <span className="ft-primary font-medium">Click to select</span> or drag & drop
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">CSV files only · max 2 MB</p>
+                      <p className="text-xs ft-text-3 mt-1">CSV files only · max 2 MB</p>
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Expected format */}
-              <div className="rounded-lg bg-[#0f1117] border border-[#2a2d3a] px-4 py-3">
-                <p className="text-xs font-medium text-slate-400 mb-1.5">Expected format (columns in order):</p>
-                <code className="text-xs text-indigo-300 font-mono">date, symbol, type, quantity, price, notes</code>
-                <p className="text-xs text-slate-600 mt-1.5">Header row is optional. <code className="text-slate-500">type</code> must be <code className="text-slate-500">buy</code> or <code className="text-slate-500">sell</code>.</p>
+              {/* Format hint */}
+              <div className="rounded-xl ft-bg border ft-border px-4 py-3">
+                <p className="text-xs font-semibold ft-text-2 uppercase tracking-[0.07em] mb-1.5">
+                  Expected format
+                </p>
+                <code className="text-xs ft-primary font-mono-num">
+                  date, symbol, type, quantity, price, notes
+                </code>
+                <p className="text-xs ft-text-3 mt-1.5">
+                  Header row optional. <code className="ft-text-2">type</code> must be <code className="ft-text-2">buy</code> or <code className="ft-text-2">sell</code>.
+                </p>
               </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
-                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs ft-primary hover:opacity-75 transition-opacity cursor-pointer"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download CSV template
+                  <Download size={13} />
+                  Download template
                 </button>
                 <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
+                  <Button variant="secondary" size="sm" onClick={handleClose}>{t('common.cancel')}</Button>
                   <Button size="sm" disabled={step !== 'selected'} onClick={handleImport}>
                     Import
                   </Button>
@@ -179,62 +194,64 @@ export const ImportModal = ({ open, onClose, onImport }: Props) => {
             </>
           )}
 
-          {/* ── LOADING ── */}
+          {/* LOADING */}
           {step === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <svg className="animate-spin w-8 h-8 text-indigo-500" viewBox="0 0 24 24" fill="none">
+            <div className="flex flex-col items-center justify-center py-14 gap-4">
+              <svg className="animate-spin w-8 h-8" style={{ color: 'var(--primary)' }} viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                 <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <p className="text-sm text-slate-400">Importing transactions…</p>
+              <p className="text-sm ft-text-2">Importing transactions…</p>
             </div>
           )}
 
-          {/* ── DONE ── */}
+          {/* DONE */}
           {step === 'done' && (
             <div className="space-y-4">
               {fatalError ? (
-                <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-4 flex items-start gap-3">
-                  <svg className="w-5 h-5 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <div className="rounded-xl ft-negative-bg border border-[var(--negative)]/25 px-4 py-4 flex items-start gap-3">
+                  <XCircle size={18} className="ft-negative mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-red-400">Import failed</p>
-                    <p className="text-xs text-red-400/70 mt-0.5">{fatalError}</p>
+                    <p className="text-sm font-semibold ft-negative">Import failed</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--negative)', opacity: 0.7 }}>{fatalError}</p>
                   </div>
                 </div>
               ) : result && (
                 <>
-                  {/* Success banner */}
-                  <div className={`rounded-xl border px-4 py-4 flex items-start gap-3 ${result.imported > 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
-                    <svg className={`w-5 h-5 mt-0.5 shrink-0 ${result.imported > 0 ? 'text-green-400' : 'text-yellow-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={result.imported > 0 ? 'M5 13l4 4L19 7' : 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'} />
-                    </svg>
+                  <div className={[
+                    'rounded-xl border px-4 py-4 flex items-start gap-3',
+                    result.imported > 0
+                      ? 'ft-positive-bg border-[var(--positive)]/25'
+                      : 'ft-warning-bg border-[var(--warning)]/25',
+                  ].join(' ')}>
+                    {result.imported > 0
+                      ? <CheckCircle size={18} className="ft-positive mt-0.5 shrink-0" />
+                      : <AlertCircle size={18} className="ft-warning mt-0.5 shrink-0" />
+                    }
                     <div>
-                      <p className={`text-sm font-medium ${result.imported > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                      <p className={`text-sm font-semibold ${result.imported > 0 ? 'ft-positive' : 'ft-warning'}`}>
                         {result.imported > 0
-                          ? `${result.imported} transaction${result.imported !== 1 ? 's' : ''} imported successfully`
-                          : 'No transactions were imported'}
+                          ? `${result.imported} transaction${result.imported !== 1 ? 's' : ''} imported`
+                          : 'No transactions imported'}
                       </p>
                       {result.errors.length > 0 && (
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs ft-text-2 mt-0.5">
                           {result.errors.length} row{result.errors.length !== 1 ? 's' : ''} skipped due to errors
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Error list */}
                   {result.errors.length > 0 && (
-                    <div className="rounded-xl bg-[#0f1117] border border-[#2a2d3a] overflow-hidden">
-                      <div className="px-4 py-2.5 border-b border-[#2a2d3a]">
-                        <p className="text-xs font-medium text-slate-400">Row errors</p>
+                    <div className="rounded-xl ft-bg border ft-border overflow-hidden">
+                      <div className="px-4 py-2.5 border-b ft-border">
+                        <p className="text-xs font-semibold ft-text-2 uppercase tracking-[0.07em]">Row errors</p>
                       </div>
-                      <ul className="divide-y divide-[#1e2130] max-h-44 overflow-y-auto">
+                      <ul className="divide-y ft-border max-h-44 overflow-y-auto">
                         {result.errors.map((err, i) => (
                           <li key={i} className="px-4 py-2.5 flex items-start gap-2">
-                            <span className="text-red-400 mt-0.5 text-xs shrink-0">✕</span>
-                            <span className="text-xs text-slate-400">{err}</span>
+                            <XCircle size={13} className="ft-negative mt-0.5 shrink-0" />
+                            <span className="text-xs ft-text-2">{err}</span>
                           </li>
                         ))}
                       </ul>
@@ -244,8 +261,8 @@ export const ImportModal = ({ open, onClose, onImport }: Props) => {
               )}
 
               <div className="flex gap-2 justify-end pt-1">
-                <Button variant="secondary" size="sm" onClick={reset}>Import another file</Button>
-                <Button size="sm" onClick={handleClose}>Done</Button>
+                <Button variant="secondary" size="sm" onClick={reset}>Import another</Button>
+                <Button size="sm" onClick={handleClose}>{t('common.close')}</Button>
               </div>
             </div>
           )}

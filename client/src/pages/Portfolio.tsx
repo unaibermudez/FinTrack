@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, AlertTriangle, TrendingUp, TrendingDown, Layers, BarChart2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getPerformance, getHistory } from '../api/assets';
 import type { PerformanceResult, HistoryPoint } from '../api/assets';
 import { getPortfolio } from '../api/portfolios';
 import type { Portfolio as IPortfolio } from '../api/portfolios';
-import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Navbar } from '../components/ui/Navbar';
 import { AllocationChart } from '../components/charts/AllocationChart';
@@ -12,19 +13,67 @@ import { HoldingsChart } from '../components/charts/HoldingsChart';
 import { HistoryChart } from '../components/charts/HistoryChart';
 import { formatCurrency, formatPercent } from '../utils/formatCurrency';
 
-const Stat = ({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) => (
-  <div>
-    <p className="text-xs text-slate-500 mb-1">{label}</p>
-    <p className={`text-xl font-bold ${positive === undefined ? 'text-slate-100' : positive ? 'text-green-400' : 'text-red-400'}`}>
-      {value}
-    </p>
-    {sub && <p className={`text-xs mt-0.5 ${positive === undefined ? 'text-slate-500' : positive ? 'text-green-500' : 'text-red-500'}`}>{sub}</p>}
+interface StatCardProps {
+  label: string;
+  value: string;
+  sub?: string;
+  positive?: boolean;
+  icon?: React.ReactNode;
+}
+
+const StatCard = ({ label, value, sub, positive, icon }: StatCardProps) => (
+  <div className="ft-card border ft-border rounded-xl p-5 flex items-start gap-4 ft-shadow-sm transition-colors duration-200">
+    {icon && (
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+        style={{
+          background: positive === undefined
+            ? 'var(--primary-bg)'
+            : positive ? 'var(--positive-bg)' : 'var(--negative-bg)',
+        }}
+      >
+        <span style={{
+          color: positive === undefined
+            ? 'var(--primary)'
+            : positive ? 'var(--positive)' : 'var(--negative)',
+        }}>
+          {icon}
+        </span>
+      </div>
+    )}
+    <div className="min-w-0">
+      <p className="text-xs ft-text-2 uppercase tracking-[0.07em] font-medium mb-1">{label}</p>
+      <p
+        className="text-xl font-bold font-mono-num leading-none"
+        style={{
+          color: positive === undefined
+            ? 'var(--text)'
+            : positive ? 'var(--positive)' : 'var(--negative)',
+        }}
+      >
+        {value}
+      </p>
+      {sub && (
+        <p
+          className="text-xs font-mono-num mt-0.5"
+          style={{
+            color: positive === undefined
+              ? 'var(--text-2)'
+              : positive ? 'var(--positive)' : 'var(--negative)',
+            opacity: 0.8,
+          }}
+        >
+          {sub}
+        </p>
+      )}
+    </div>
   </div>
 );
 
 export const Portfolio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [portfolio, setPortfolio] = useState<IPortfolio | null>(null);
   const [performance, setPerformance] = useState<PerformanceResult | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -40,20 +89,23 @@ export const Portfolio = () => {
   }, [id]);
 
   if (loading) return (
-    <div className="min-h-screen">
+    <div className="min-h-screen ft-bg">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
-        {[1, 2].map((i) => <div key={i} className="h-40 rounded-xl bg-[#1a1d27] animate-pulse" />)}
-      </div>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl ft-card border ft-border animate-pulse" />)}
+        </div>
+        <div className="h-64 rounded-xl ft-card border ft-border animate-pulse" />
+      </main>
     </div>
   );
 
   if (error || !portfolio) return (
-    <div className="min-h-screen">
+    <div className="min-h-screen ft-bg">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-        <p className="text-slate-500">Portfolio not found.</p>
-        <Button className="mt-4" onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+        <p className="ft-text-2 text-sm">{t('common.error')}</p>
+        <Button className="mt-4" onClick={() => navigate('/dashboard')}>{t('common.back')}</Button>
       </div>
     </div>
   );
@@ -61,111 +113,185 @@ export const Portfolio = () => {
   const isPositive = (performance?.totalPl ?? 0) >= 0;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen ft-bg">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-              <Link to="/dashboard" className="hover:text-slate-300 transition-colors">Portfolios</Link>
-              <span>/</span>
-              <span className="text-slate-300">{portfolio.name}</span>
-            </div>
-            {portfolio.description && <p className="text-sm text-slate-500">{portfolio.description}</p>}
+            <nav className="flex items-center gap-1.5 text-xs ft-text-2 mb-2">
+              <Link to="/dashboard" className="hover:ft-text transition-colors flex items-center gap-1">
+                <ArrowLeft size={11} />
+                {t('portfolio.portfolios')}
+              </Link>
+              <span className="ft-text-3">/</span>
+              <span className="ft-text">{portfolio.name}</span>
+            </nav>
+            <h1 className="text-2xl font-bold ft-text tracking-tight">{portfolio.name}</h1>
+            {portfolio.description && (
+              <p className="text-sm ft-text-2 mt-0.5">{portfolio.description}</p>
+            )}
           </div>
-          <Button variant="secondary" onClick={() => navigate(`/portfolio/${id}/transactions`)}>
-            Transactions
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/portfolio/${id}/transactions`)}
+          >
+            {t('portfolio.transactions')}
           </Button>
         </div>
 
         {/* Price error banner */}
         {performance?.priceErrors && performance.priceErrors.length > 0 && (
-          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 flex items-start gap-3">
-            <svg className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            <p className="text-sm text-yellow-300">
-              Could not fetch live price for{' '}
-              <span className="font-semibold">{performance.priceErrors.join(', ')}</span>.
-              {' '}P&L for those holdings is shown as —. Check that the symbol is valid or try again later.
+          <div className="rounded-xl ft-warning-bg border border-[var(--warning)]/25 px-4 py-3 flex items-start gap-3 animate-slide-down">
+            <AlertTriangle size={15} className="ft-warning mt-0.5 shrink-0" />
+            <p className="text-sm ft-warning">
+              {t('portfolio.priceErrorBanner', { symbols: performance.priceErrors.join(', ') })}
             </p>
           </div>
         )}
 
         {/* Stats */}
-        <Card>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            <Stat label="Total Value" value={formatCurrency(performance?.totalValue ?? 0)} />
-            <Stat
-              label="Total P&L"
-              value={formatCurrency(performance?.totalPl ?? 0)}
-              sub={performance ? formatPercent(performance.totalPlPercent) : undefined}
-              positive={isPositive}
-            />
-            <Stat label="Holdings" value={String(performance?.holdings.length ?? 0)} />
-            <Stat label="Portfolio" value={portfolio.name} />
-          </div>
-        </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger">
+          <StatCard
+            label={t('portfolio.totalValue')}
+            value={formatCurrency(performance?.totalValue ?? 0)}
+            icon={<BarChart2 size={16} />}
+          />
+          <StatCard
+            label={t('portfolio.totalPL')}
+            value={formatCurrency(performance?.totalPl ?? 0)}
+            sub={performance ? formatPercent(performance.totalPlPercent) : undefined}
+            positive={isPositive}
+            icon={isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+          />
+          <StatCard
+            label={t('portfolio.holdings')}
+            value={String(performance?.holdings.length ?? 0)}
+            icon={<Layers size={16} />}
+          />
+          <StatCard
+            label={t('portfolio.portfolio')}
+            value={portfolio.name}
+          />
+        </div>
 
         {performance && performance.holdings.length > 0 ? (
           <>
             {/* History chart */}
             {history.length > 1 && (
-              <Card title="Portfolio Value Over Time">
-                <HistoryChart data={history} />
-              </Card>
+              <div className="ft-card border ft-border rounded-xl ft-shadow-sm animate-fade-in" style={{ animationDelay: '80ms' }}>
+                <div className="px-5 pt-5 pb-2">
+                  <h3 className="text-xs font-semibold ft-text-2 uppercase tracking-[0.08em]">
+                    {t('portfolio.valueOverTime')}
+                  </h3>
+                </div>
+                <div className="px-2 pb-4">
+                  <HistoryChart data={history} />
+                </div>
+              </div>
             )}
 
-            {/* Allocation & P&L charts */}
+            {/* Allocation + P&L charts */}
             {(() => {
               const pricedHoldings = performance.holdings.filter((h) => !h.priceError);
               return pricedHoldings.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <Card title="Allocation">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: '120ms' }}>
+                  <div className="ft-card border ft-border rounded-xl ft-shadow-sm">
+                    <div className="px-5 pt-5 pb-2">
+                      <h3 className="text-xs font-semibold ft-text-2 uppercase tracking-[0.08em]">
+                        {t('portfolio.allocation')}
+                      </h3>
+                    </div>
                     <AllocationChart holdings={pricedHoldings} />
-                  </Card>
-                  <Card title="P&L by Asset">
+                  </div>
+                  <div className="ft-card border ft-border rounded-xl ft-shadow-sm">
+                    <div className="px-5 pt-5 pb-2">
+                      <h3 className="text-xs font-semibold ft-text-2 uppercase tracking-[0.08em]">
+                        {t('portfolio.plByAsset')}
+                      </h3>
+                    </div>
                     <HoldingsChart holdings={pricedHoldings} />
-                  </Card>
+                  </div>
                 </div>
               ) : null;
             })()}
 
             {/* Holdings table */}
-            <Card title="Holdings">
+            <div
+              className="ft-card border ft-border rounded-xl ft-shadow-sm overflow-hidden animate-fade-in"
+              style={{ animationDelay: '160ms' }}
+            >
+              <div className="px-5 py-4 border-b ft-border">
+                <h3 className="text-xs font-semibold ft-text-2 uppercase tracking-[0.08em]">
+                  {t('portfolio.holdings')}
+                </h3>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-slate-500 border-b border-[#2a2d3a]">
-                      {['Symbol', 'Qty', 'Avg Cost', 'Price', 'Value', 'P&L', '%'].map((h) => (
-                        <th key={h} className="text-left pb-2 pr-4 font-medium">{h}</th>
+                    <tr className="border-b ft-border">
+                      {[
+                        { label: t('portfolio.symbol'), align: 'left' },
+                        { label: t('portfolio.qty'), align: 'right' },
+                        { label: t('portfolio.avgCost'), align: 'right' },
+                        { label: t('portfolio.price'), align: 'right' },
+                        { label: t('portfolio.value'), align: 'right' },
+                        { label: t('portfolio.pl'), align: 'right' },
+                        { label: t('portfolio.plPct'), align: 'right' },
+                      ].map(({ label, align }) => (
+                        <th
+                          key={label}
+                          className={`px-4 py-3 text-xs font-semibold ft-text-2 uppercase tracking-[0.07em] ${
+                            align === 'right' ? 'text-right' : 'text-left'
+                          }`}
+                        >
+                          {label}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {performance.holdings.map((h) => (
-                      <tr key={h.symbol} className="border-b border-[#1e2130] hover:bg-white/[0.02]">
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-100">{h.symbol}</span>
+                      <tr key={h.symbol} className="border-b ft-border last:border-0 hover:ft-hover transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold ft-text font-mono-num tracking-wide">{h.symbol}</span>
                             {h.priceError && (
-                              <span title="Live price unavailable" className="text-yellow-400 text-xs leading-none cursor-default">⚠</span>
+                              <span
+                                title={t('portfolio.priceUnavailable')}
+                                className="ft-warning text-xs leading-none cursor-default"
+                              >
+                                ⚠
+                              </span>
                             )}
                           </div>
                         </td>
-                        <td className="py-3 pr-4 text-slate-300">{h.quantity}</td>
-                        <td className="py-3 pr-4 text-slate-400">{formatCurrency(h.avgCost)}</td>
-                        <td className="py-3 pr-4 text-slate-300">
-                          {h.priceError ? <span className="text-slate-600 text-xs">unavailable</span> : formatCurrency(h.currentPrice)}
+                        <td className="px-4 py-3 ft-text-2 text-right font-mono-num">{h.quantity}</td>
+                        <td className="px-4 py-3 ft-text-2 text-right font-mono-num">{formatCurrency(h.avgCost)}</td>
+                        <td className="px-4 py-3 ft-text text-right font-mono-num">
+                          {h.priceError
+                            ? <span className="ft-text-3 text-xs">{t('portfolio.priceUnavailable')}</span>
+                            : formatCurrency(h.currentPrice)
+                          }
                         </td>
-                        <td className="py-3 pr-4 text-slate-200">
-                          {h.priceError ? <span className="text-slate-600 text-xs">—</span> : formatCurrency(h.currentValue)}
+                        <td className="px-4 py-3 ft-text font-medium text-right font-mono-num">
+                          {h.priceError
+                            ? <span className="ft-text-3">—</span>
+                            : formatCurrency(h.currentValue)
+                          }
                         </td>
-                        <td className={`py-3 pr-4 font-medium ${h.priceError ? 'text-slate-600' : h.plAbsolute >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <td
+                          className="px-4 py-3 font-semibold text-right font-mono-num"
+                          style={{ color: h.priceError ? 'var(--text-3)' : h.plAbsolute >= 0 ? 'var(--positive)' : 'var(--negative)' }}
+                        >
                           {h.priceError ? '—' : formatCurrency(h.plAbsolute)}
                         </td>
-                        <td className={`py-3 font-medium text-xs ${h.priceError ? 'text-slate-600' : h.plPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <td
+                          className="px-4 py-3 text-xs font-medium text-right font-mono-num"
+                          style={{ color: h.priceError ? 'var(--text-3)' : h.plPercent >= 0 ? 'var(--positive)' : 'var(--negative)' }}
+                        >
                           {h.priceError ? '—' : formatPercent(h.plPercent)}
                         </td>
                       </tr>
@@ -173,13 +299,13 @@ export const Portfolio = () => {
                   </tbody>
                 </table>
               </div>
-            </Card>
+            </div>
           </>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-slate-500 text-sm">No holdings yet.</p>
-            <Button className="mt-4" onClick={() => navigate(`/portfolio/${id}/transactions`)}>
-              Add first transaction
+          <div className="ft-card border ft-border rounded-2xl p-16 text-center animate-fade-in">
+            <p className="ft-text-2 text-sm mb-4">{t('portfolio.noHoldings')}</p>
+            <Button onClick={() => navigate(`/portfolio/${id}/transactions`)}>
+              {t('portfolio.addFirstTransaction')}
             </Button>
           </div>
         )}
