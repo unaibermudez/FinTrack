@@ -9,15 +9,37 @@ interface AuthUser {
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
+  isInitialized: boolean;
   setAuth: (user: AuthUser, accessToken: string) => void;
   setAccessToken: (token: string) => void;
   clearAuth: () => void;
+  setInitialized: () => void;
+}
+
+const STORED_USER_KEY = 'fintrack_user';
+
+function getStoredUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(STORED_USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  user: getStoredUser(),
   accessToken: null,
-  setAuth: (user, accessToken) => set({ user, accessToken }),
+  isInitialized: false,
+
+  setAuth: (user, accessToken) => {
+    localStorage.setItem(STORED_USER_KEY, JSON.stringify(user));
+    set({ user, accessToken });
+  },
   setAccessToken: (accessToken) => set({ accessToken }),
-  clearAuth: () => set({ user: null, accessToken: null }),
+  clearAuth: () => {
+    localStorage.removeItem(STORED_USER_KEY);
+    set({ user: null, accessToken: null });
+  },
+  setInitialized: () => set({ isInitialized: true }),
 }));
