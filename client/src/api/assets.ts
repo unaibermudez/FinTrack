@@ -16,6 +16,9 @@ export interface PerformanceResult {
   totalValue: number;
   totalPl: number;
   totalPlPercent: number;
+  totalDividends: number;
+  totalFees: number;
+  totalReturn: number;
   holdings: HoldingResult[];
   priceErrors?: string[];
 }

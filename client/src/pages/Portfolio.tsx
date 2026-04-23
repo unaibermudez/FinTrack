@@ -106,29 +106,44 @@ export const Portfolio = () => {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger">
-          <StatCard
-            label={t('portfolio.totalValue')}
-            value={formatCurrency(performance?.totalValue ?? 0)}
-            icon={<BarChart2 size={16} />}
-          />
-          <StatCard
-            label={t('portfolio.totalPL')}
-            value={formatCurrency(performance?.totalPl ?? 0)}
-            sub={performance ? formatPercent(performance.totalPlPercent) : undefined}
-            positive={isPositive}
-            icon={isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-          />
-          <StatCard
-            label={t('portfolio.holdings')}
-            value={String(performance?.holdings.length ?? 0)}
-            icon={<Layers size={16} />}
-          />
-          <StatCard
-            label={t('portfolio.portfolio')}
-            value={portfolio.name}
-          />
-        </div>
+        {(() => {
+          const hasDividends = (performance?.totalDividends ?? 0) > 0;
+          return (
+            <div className={`grid gap-3 sm:gap-4 stagger ${hasDividends ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'}`}>
+              <StatCard
+                label={t('portfolio.totalValue')}
+                value={formatCurrency(performance?.totalValue ?? 0)}
+                icon={<BarChart2 size={16} />}
+              />
+              <StatCard
+                label={t('portfolio.totalPL')}
+                value={formatCurrency(performance?.totalPl ?? 0)}
+                sub={performance ? formatPercent(performance.totalPlPercent) : undefined}
+                positive={isPositive}
+                icon={isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              />
+              <StatCard
+                label={t('portfolio.holdings')}
+                value={String(performance?.holdings.length ?? 0)}
+                icon={<Layers size={16} />}
+              />
+              {hasDividends && (
+                <StatCard
+                  label={t('portfolio.dividends')}
+                  value={formatCurrency(performance!.totalDividends)}
+                  positive={true}
+                  icon={<TrendingUp size={16} />}
+                />
+              )}
+              <StatCard
+                label={t('portfolio.totalReturn')}
+                value={formatCurrency(performance?.totalReturn ?? 0)}
+                positive={(performance?.totalReturn ?? 0) >= 0}
+                icon={(performance?.totalReturn ?? 0) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              />
+            </div>
+          );
+        })()}
 
         {performance && performance.holdings.length > 0 ? (
           <>

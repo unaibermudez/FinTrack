@@ -24,6 +24,9 @@ export interface PerformanceResult {
   totalValue: number;
   totalPl: number;
   totalPlPercent: number;
+  totalDividends: number;
+  totalFees: number;
+  totalReturn: number;
   holdings: HoldingResult[];
   priceErrors?: string[];
 }
@@ -32,6 +35,8 @@ export interface SummaryResult {
   totalValue: number;
   totalPl: number;
   totalPlPercent: number;
+  totalDividends: number;
+  totalReturn: number;
   portfolioCount: number;
   holdingsCount: number;
 }
@@ -45,13 +50,17 @@ export const getPortfoliosSummary = async (userId: string): Promise<SummaryResul
 
   let totalValue = 0;
   let totalCost = 0;
+  let totalDividends = 0;
+  let totalReturn = 0;
   let holdingsCount = 0;
 
   for (const result of settled) {
     if (result.status === 'fulfilled') {
-      const { totalValue: val, totalPl: pl, holdings } = result.value;
+      const { totalValue: val, totalPl: pl, totalDividends: div, totalReturn: ret, holdings } = result.value;
       totalValue += val;
       totalCost += val - pl;
+      totalDividends += div;
+      totalReturn += ret;
       holdingsCount += holdings.filter((h) => !h.priceError).length;
     }
   }
@@ -63,6 +72,8 @@ export const getPortfoliosSummary = async (userId: string): Promise<SummaryResul
     totalValue: parseFloat(totalValue.toFixed(2)),
     totalPl: parseFloat(totalPl.toFixed(2)),
     totalPlPercent: parseFloat(totalPlPercent.toFixed(2)),
+    totalDividends: parseFloat(totalDividends.toFixed(2)),
+    totalReturn: parseFloat(totalReturn.toFixed(2)),
     portfolioCount: portfolios.length,
     holdingsCount,
   };
@@ -78,12 +89,24 @@ export const getPerformance = async (
   const transactions = await Transaction.find({ portfolioId });
 
   const holdings: Record<string, HoldingAccumulator> = {};
+  let totalDividends = 0;
+  let totalFees = 0;
+
   for (const tx of transactions) {
     const { assetSymbol, type, quantity, priceAtTransaction } = tx;
+
+    if (type === 'dividend') {
+      totalDividends += quantity * priceAtTransaction;
+      continue;
+    }
+    if (type === 'fee') {
+      totalFees += quantity * priceAtTransaction;
+      continue;
+    }
+
     if (!holdings[assetSymbol]) {
       holdings[assetSymbol] = { totalQty: 0, totalCost: 0 };
     }
-
     if (type === 'buy') {
       holdings[assetSymbol].totalQty += quantity;
       holdings[assetSymbol].totalCost += quantity * priceAtTransaction;
@@ -132,11 +155,18 @@ export const getPerformance = async (
   const totalPlPercent = totalCost > 0 ? (totalPl / totalCost) * 100 : 0;
   const priceErrors = results.filter((r) => r.priceError).map((r) => r.symbol);
 
+  const totalDividendsRounded = parseFloat(totalDividends.toFixed(2));
+  const totalFeesRounded = parseFloat(totalFees.toFixed(2));
+  const totalReturn = parseFloat((totalPl + totalDividendsRounded - totalFeesRounded).toFixed(2));
+
   return {
     portfolioId,
     totalValue: parseFloat(totalValue.toFixed(2)),
     totalPl: parseFloat(totalPl.toFixed(2)),
     totalPlPercent: parseFloat(totalPlPercent.toFixed(2)),
+    totalDividends: totalDividendsRounded,
+    totalFees: totalFeesRounded,
+    totalReturn,
     holdings: results,
     ...(priceErrors.length > 0 && { priceErrors }),
   };

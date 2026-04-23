@@ -17,7 +17,7 @@
 | 6 | Realized P&L + Tax Report | L | ⬜ Pendiente |
 | 7 | Watchlist | M | ⬜ Pendiente |
 | 8 | Benchmarking vs. Índice (SPY / QQQ) | M | ⬜ Pendiente |
-| 9 | Dividend Tracking | M | ⬜ Pendiente |
+| 9 | Dividend Tracking | M | ✅ Hecho |
 | 10 | Price Alerts | L | ⬜ Pendiente |
 
 ## GRUPO 3 — Polish

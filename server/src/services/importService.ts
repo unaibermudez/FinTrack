@@ -79,11 +79,11 @@ export const importFromCsv = async (
     // Type
     const type = rawType?.trim().toLowerCase();
     if (!type) {
-      errors.push(`Row ${rowNum}: missing transaction type — must be "buy" or "sell"`);
+      errors.push(`Row ${rowNum}: missing transaction type — must be "buy", "sell", "dividend" or "fee"`);
       return;
     }
-    if (!['buy', 'sell'].includes(type)) {
-      errors.push(`Row ${rowNum}: invalid type "${rawType}" — must be "buy" or "sell" (case-insensitive)`);
+    if (!['buy', 'sell', 'dividend', 'fee'].includes(type)) {
+      errors.push(`Row ${rowNum}: invalid type "${rawType}" — must be "buy", "sell", "dividend" or "fee" (case-insensitive)`);
       return;
     }
 

@@ -1,10 +1,12 @@
 import api from './axiosInstance';
 
+export type TransactionType = 'buy' | 'sell' | 'dividend' | 'fee';
+
 export interface Transaction {
   _id: string;
   portfolioId: string;
   assetSymbol: string;
-  type: 'buy' | 'sell';
+  type: TransactionType;
   quantity: number;
   priceAtTransaction: number;
   date: string;
@@ -13,7 +15,7 @@ export interface Transaction {
 
 export interface TransactionInput {
   assetSymbol: string;
-  type: 'buy' | 'sell';
+  type: TransactionType;
   quantity: number;
   priceAtTransaction: number;
   date?: string;

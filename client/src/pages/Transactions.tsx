@@ -21,6 +21,7 @@ import { formatDate, toInputDate } from '../utils/formatDate';
 import { exportToCsv } from '../utils/exportCsv';
 
 type SortField = 'date' | 'assetSymbol' | 'quantity' | 'priceAtTransaction';
+type TxTypeFilter = '' | 'buy' | 'sell' | 'dividend' | 'fee';
 
 const SortIcon = ({ field, sort, order }: { field: SortField; sort: SortField; order: 'asc' | 'desc' }) => {
   if (sort !== field) return <ChevronsUpDown size={11} className="opacity-30" />;
@@ -36,6 +37,13 @@ const EMPTY_FORM: TransactionInput = {
   notes: '',
 };
 
+const TYPE_BADGE: Record<string, string> = {
+  buy: 'ft-positive-bg ft-positive',
+  sell: 'ft-negative-bg ft-negative',
+  dividend: 'ft-primary-subtle ft-primary',
+  fee: 'ft-warning-bg ft-warning',
+};
+
 export const Transactions = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -46,7 +54,7 @@ export const Transactions = () => {
   // Filter / sort / pagination state
   const [symbolInput, setSymbolInput] = useState('');
   const [debouncedSymbol, setDebouncedSymbol] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'' | 'buy' | 'sell'>('');
+  const [typeFilter, setTypeFilter] = useState<TxTypeFilter>('');
   const [sort, setSort] = useState<SortField>('date');
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
@@ -227,12 +235,14 @@ export const Transactions = () => {
           </div>
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as '' | 'buy' | 'sell')}
+            onChange={(e) => setTypeFilter(e.target.value as TxTypeFilter)}
             className="h-9 px-3 rounded-lg ft-input-bg border ft-border text-sm ft-text focus:outline-none focus:border-[var(--primary)] transition-all cursor-pointer"
           >
             <option value="">{t('transactions.filterAll')}</option>
             <option value="buy">{t('transactions.filterBuy')}</option>
             <option value="sell">{t('transactions.filterSell')}</option>
+            <option value="dividend">{t('transactions.dividend')}</option>
+            <option value="fee">{t('transactions.fee')}</option>
           </select>
           {hasFilters && (
             <button
@@ -354,15 +364,8 @@ export const Transactions = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={[
-                              'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                              tx.type === 'buy'
-                                ? 'ft-positive-bg ft-positive'
-                                : 'ft-negative-bg ft-negative',
-                            ].join(' ')}
-                          >
-                            {tx.type === 'buy' ? t('transactions.buy') : t('transactions.sell')}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${TYPE_BADGE[tx.type] ?? ''}`}>
+                            {t(`transactions.${tx.type}`)}
                           </span>
                         </td>
                         <td className="px-4 py-3 ft-text text-right font-mono-num">{tx.quantity}</td>
@@ -432,17 +435,25 @@ export const Transactions = () => {
               </label>
               <select
                 value={form.type}
-                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as 'buy' | 'sell' }))}
+                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as TransactionInput['type'] }))}
                 className="w-full h-10 rounded-lg ft-input-bg border ft-border px-3 text-sm ft-text focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
               >
                 <option value="buy">{t('transactions.buy')}</option>
                 <option value="sell">{t('transactions.sell')}</option>
+                <option value="dividend">{t('transactions.dividend')}</option>
+                <option value="fee">{t('transactions.fee')}</option>
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label={t('transactions.quantity')} type="number" step="any" min="0" {...field('quantity')} required />
-            <Input label={t('transactions.price')} type="number" step="any" min="0" {...field('priceAtTransaction')} required />
+            <Input
+              label={t('transactions.price')}
+              hint={form.type === 'dividend' ? t('transactions.priceHintDividend') : form.type === 'fee' ? t('transactions.priceHintFee') : undefined}
+              type="number" step="any" min="0"
+              {...field('priceAtTransaction')}
+              required
+            />
           </div>
           <Input label={t('transactions.date')} type="date" {...field('date')} required />
           <Input
