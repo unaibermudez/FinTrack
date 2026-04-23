@@ -20,9 +20,25 @@ export interface TransactionInput {
   notes?: string;
 }
 
-export const getTransactions = (portfolioId: string) =>
-  api.get<{ transactions: Transaction[] }>(`/portfolios/${portfolioId}/transactions`)
-    .then((r) => r.data.transactions);
+export interface TransactionQuery {
+  symbol?: string;
+  type?: string;
+  sort?: string;
+  order?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedTransactions {
+  transactions: Transaction[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export const getTransactions = (portfolioId: string, query: TransactionQuery = {}) =>
+  api.get<PaginatedTransactions>(`/portfolios/${portfolioId}/transactions`, { params: query })
+    .then((r) => r.data);
 
 export const createTransaction = (portfolioId: string, data: TransactionInput) =>
   api.post<{ transaction: Transaction }>(`/portfolios/${portfolioId}/transactions`, data)

@@ -6,74 +6,21 @@ import { getPerformance, getHistory } from '../api/assets';
 import type { PerformanceResult, HistoryPoint } from '../api/assets';
 import { getPortfolio } from '../api/portfolios';
 import type { Portfolio as IPortfolio } from '../api/portfolios';
+import { usePortfolioStore } from '../store/portfolioStore';
 import { Button } from '../components/ui/Button';
 import { Navbar } from '../components/ui/Navbar';
+import { StatCard } from '../components/ui/StatCard';
 import { AllocationChart } from '../components/charts/AllocationChart';
 import { HoldingsChart } from '../components/charts/HoldingsChart';
 import { HistoryChart } from '../components/charts/HistoryChart';
 import { formatCurrency, formatPercent } from '../utils/formatCurrency';
 
-interface StatCardProps {
-  label: string;
-  value: string;
-  sub?: string;
-  positive?: boolean;
-  icon?: React.ReactNode;
-}
-
-const StatCard = ({ label, value, sub, positive, icon }: StatCardProps) => (
-  <div className="ft-card border ft-border rounded-xl p-5 flex items-start gap-4 ft-shadow-sm transition-colors duration-200">
-    {icon && (
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-        style={{
-          background: positive === undefined
-            ? 'var(--primary-bg)'
-            : positive ? 'var(--positive-bg)' : 'var(--negative-bg)',
-        }}
-      >
-        <span style={{
-          color: positive === undefined
-            ? 'var(--primary)'
-            : positive ? 'var(--positive)' : 'var(--negative)',
-        }}>
-          {icon}
-        </span>
-      </div>
-    )}
-    <div className="min-w-0">
-      <p className="text-xs ft-text-2 uppercase tracking-[0.07em] font-medium mb-1">{label}</p>
-      <p
-        className="text-xl font-bold font-mono-num leading-none"
-        style={{
-          color: positive === undefined
-            ? 'var(--text)'
-            : positive ? 'var(--positive)' : 'var(--negative)',
-        }}
-      >
-        {value}
-      </p>
-      {sub && (
-        <p
-          className="text-xs font-mono-num mt-0.5"
-          style={{
-            color: positive === undefined
-              ? 'var(--text-2)'
-              : positive ? 'var(--positive)' : 'var(--negative)',
-            opacity: 0.8,
-          }}
-        >
-          {sub}
-        </p>
-      )}
-    </div>
-  </div>
-);
 
 export const Portfolio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const setActivePortfolio = usePortfolioStore((s) => s.setActivePortfolio);
   const [portfolio, setPortfolio] = useState<IPortfolio | null>(null);
   const [performance, setPerformance] = useState<PerformanceResult | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -83,10 +30,16 @@ export const Portfolio = () => {
   useEffect(() => {
     if (!id) return;
     Promise.all([getPortfolio(id), getPerformance(id), getHistory(id)])
-      .then(([p, perf, hist]) => { setPortfolio(p); setPerformance(perf); setHistory(hist); })
+      .then(([p, perf, hist]) => {
+        setPortfolio(p);
+        setActivePortfolio(p);
+        setPerformance(perf);
+        setHistory(hist);
+      })
       .catch(() => setError('Failed to load portfolio'))
       .finally(() => setLoading(false));
-  }, [id]);
+    return () => setActivePortfolio(null);
+  }, [id, setActivePortfolio]);
 
   if (loading) return (
     <div className="min-h-screen ft-bg">

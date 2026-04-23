@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ArrowRight, FolderOpen, Trash2 } from 'lucide-react';
+import { Plus, ArrowRight, FolderOpen, Trash2, Pencil, BarChart2, TrendingUp, TrendingDown, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePortfolios } from '../hooks/usePortfolios';
-import { Card } from '../components/ui/Card';
+import { usePortfolioSummary } from '../hooks/usePortfolioSummary';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Navbar } from '../components/ui/Navbar';
+import { StatCard } from '../components/ui/StatCard';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { formatCurrency, formatPercent } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 import type { Portfolio } from '../api/portfolios';
 
 export const Dashboard = () => {
-  const { portfolios, loading, create, remove } = usePortfolios();
+  const { portfolios, loading, create, update, remove } = usePortfolios();
+  const { summary, loading: summaryLoading } = usePortfolioSummary();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -22,6 +25,11 @@ export const Dashboard = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
+
+  const [editTarget, setEditTarget] = useState<Portfolio | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editing, setEditing] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Portfolio | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -40,6 +48,28 @@ export const Dashboard = () => {
       toast.error(t('common.error'));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEdit = (e: React.MouseEvent, p: Portfolio) => {
+    e.stopPropagation();
+    setEditTarget(p);
+    setEditName(p.name);
+    setEditDescription(p.description ?? '');
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget || !editName.trim()) return;
+    setEditing(true);
+    try {
+      await update(editTarget._id, { name: editName, description: editDescription });
+      setEditTarget(null);
+      toast.success(t('dashboard.portfolioUpdated'));
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -76,6 +106,42 @@ export const Dashboard = () => {
           </Button>
         </div>
 
+        {/* Summary bar — only when there are portfolios */}
+        {(summaryLoading || (summary && summary.portfolioCount > 0)) && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 animate-fade-in">
+            {summaryLoading ? (
+              [1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-24 rounded-xl ft-card border ft-border animate-pulse" />
+              ))
+            ) : summary ? (
+              <>
+                <StatCard
+                  label={t('dashboard.totalValue')}
+                  value={formatCurrency(summary.totalValue)}
+                  icon={<BarChart2 size={16} />}
+                />
+                <StatCard
+                  label={t('dashboard.totalPL')}
+                  value={formatCurrency(summary.totalPl)}
+                  sub={formatPercent(summary.totalPlPercent)}
+                  positive={summary.totalPl >= 0}
+                  icon={summary.totalPl >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                />
+                <StatCard
+                  label={t('dashboard.portfoliosLabel')}
+                  value={String(summary.portfolioCount)}
+                  icon={<FolderOpen size={16} />}
+                />
+                <StatCard
+                  label={t('dashboard.totalHoldings')}
+                  value={String(summary.holdingsCount)}
+                  icon={<Layers size={16} />}
+                />
+              </>
+            ) : null}
+          </div>
+        )}
+
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
             {[1, 2, 3].map((i) => (
@@ -104,14 +170,23 @@ export const Dashboard = () => {
                 onClick={() => navigate(`/portfolio/${p._id}`)}
                 className="group relative ft-card border ft-border rounded-xl p-5 cursor-pointer transition-all duration-150 hover:border-[var(--primary)]/40 hover:ft-shadow animate-fade-in"
               >
-                {/* Delete button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
-                  className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center rounded-lg ft-text-3 hover:ft-negative hover:ft-negative-bg cursor-pointer"
-                  title={t('common.delete')}
-                >
-                  <Trash2 size={13} />
-                </button>
+                {/* Edit / Delete buttons */}
+                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => openEdit(e, p)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg ft-text-3 hover:ft-primary hover:ft-primary-subtle cursor-pointer transition-colors"
+                    title={t('common.edit')}
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg ft-text-3 hover:ft-negative hover:ft-negative-bg cursor-pointer transition-colors"
+                    title={t('common.delete')}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
 
                 <div className="flex-1 min-w-0 pr-6">
                   <h3 className="font-semibold ft-text truncate group-hover:ft-primary transition-colors mb-1">
@@ -163,6 +238,38 @@ export const Dashboard = () => {
             </Button>
             <Button type="submit" loading={creating}>
               {t('dashboard.createPortfolio')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit modal */}
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title={t('dashboard.editPortfolio')}
+      >
+        <form onSubmit={handleEdit} className="flex flex-col gap-4">
+          <Input
+            label={t('dashboard.portfolioName')}
+            placeholder="e.g. Tech Growth, Crypto"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+          />
+          <Input
+            label={t('dashboard.portfolioDescription')}
+            hint={t('common.optional')}
+            placeholder="A brief description"
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+          />
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="secondary" type="button" onClick={() => setEditTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" loading={editing}>
+              {t('common.save')}
             </Button>
           </div>
         </form>

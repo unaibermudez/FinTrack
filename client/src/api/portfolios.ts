@@ -22,3 +22,14 @@ export const updatePortfolio = (id: string, data: { name?: string; description?:
 
 export const deletePortfolio = (id: string) =>
   api.delete(`/portfolios/${id}`);
+
+export interface PortfolioSummary {
+  totalValue: number;
+  totalPl: number;
+  totalPlPercent: number;
+  portfolioCount: number;
+  holdingsCount: number;
+}
+
+export const getPortfoliosSummary = () =>
+  api.get<PortfolioSummary>('/portfolios/summary').then((r) => r.data);

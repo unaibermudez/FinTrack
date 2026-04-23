@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Sun, Moon, Globe, LayoutDashboard, User, LogOut, TrendingUp } from 'lucide-react';
+import { Sun, Moon, Globe, LayoutDashboard, User, LogOut, TrendingUp, Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useThemeStore } from '../../store/themeStore';
@@ -13,6 +14,9 @@ export const Navbar = () => {
   const location = useLocation();
   const { theme, toggle } = useThemeStore();
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   const toggleLanguage = () => {
     const next = i18n.language === 'en' ? 'es' : 'en';
@@ -61,54 +65,125 @@ export const Navbar = () => {
 
         {/* Right controls */}
         <div className="flex items-center gap-1">
-          {/* Language toggle */}
+          {/* Language toggle — hidden on mobile (in drawer) */}
           <button
             onClick={toggleLanguage}
             title={t('nav.language')}
-            className="flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-medium ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
+            className="hidden sm:flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-medium ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
           >
             <Globe size={14} />
-            <span className="hidden sm:inline uppercase">{i18n.language}</span>
+            <span className="uppercase">{i18n.language}</span>
           </button>
 
-          {/* Theme toggle */}
+          {/* Theme toggle — hidden on mobile (in drawer) */}
           <button
             onClick={toggle}
             title={t('nav.theme')}
-            className="h-8 w-8 flex items-center justify-center rounded-lg ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
           >
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
-          {/* Divider */}
-          <div className="h-5 w-px ft-border mx-1" />
+          {/* Divider — desktop only */}
+          <div className="hidden sm:block h-5 w-px ft-border mx-1" />
 
-          {/* Profile */}
+          {/* Profile — desktop only */}
           <Link
             to="/profile"
             className={[
-              'flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs transition-colors',
+              'hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs transition-colors',
               isActive('/profile')
                 ? 'ft-primary-subtle ft-primary font-medium'
                 : 'ft-text-2 hover:ft-text hover:ft-hover',
             ].join(' ')}
           >
             <User size={13} />
-            <span className="hidden sm:inline max-w-[100px] truncate">
-              {user?.name ?? user?.email}
-            </span>
+            <span className="max-w-[100px] truncate">{user?.name ?? user?.email}</span>
           </Link>
 
-          {/* Sign out */}
+          {/* Sign out — desktop only */}
           <button
             onClick={() => { logout(); navigate('/login'); }}
             title={t('auth.logout')}
-            className="h-8 w-8 flex items-center justify-center rounded-lg ft-text-2 hover:text-[var(--negative)] hover:ft-negative-bg transition-colors cursor-pointer"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg ft-text-2 hover:text-[var(--negative)] hover:ft-negative-bg transition-colors cursor-pointer"
           >
             <LogOut size={13} />
           </button>
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="sm:hidden h-8 w-8 flex items-center justify-center rounded-lg ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile drawer */}
+      {menuOpen && (
+        <div
+          className="sm:hidden border-t ft-border px-4 py-3 flex flex-col gap-1 animate-fade-in"
+          style={{ backgroundColor: 'var(--bg-card)' }}
+        >
+          <Link
+            to="/dashboard"
+            className={[
+              'flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              isActive('/dashboard')
+                ? 'ft-primary-subtle ft-primary'
+                : 'ft-text-2 hover:ft-text hover:ft-hover',
+            ].join(' ')}
+          >
+            <LayoutDashboard size={15} />
+            {t('nav.dashboard')}
+          </Link>
+
+          <Link
+            to="/profile"
+            className={[
+              'flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              isActive('/profile')
+                ? 'ft-primary-subtle ft-primary font-medium'
+                : 'ft-text-2 hover:ft-text hover:ft-hover',
+            ].join(' ')}
+          >
+            <User size={15} />
+            {user?.name ?? user?.email}
+          </Link>
+
+          <div className="h-px ft-border my-1" />
+
+          <div className="flex items-center gap-2 px-1">
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
+            >
+              <Globe size={14} />
+              <span className="uppercase font-medium">{i18n.language}</span>
+            </button>
+
+            <button
+              onClick={toggle}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm ft-text-2 hover:ft-text hover:ft-hover transition-colors cursor-pointer"
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+            </button>
+          </div>
+
+          <div className="h-px ft-border my-1" />
+
+          <button
+            onClick={() => { logout(); navigate('/login'); }}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm ft-text-2 hover:text-[var(--negative)] hover:ft-negative-bg transition-colors cursor-pointer text-left"
+          >
+            <LogOut size={15} />
+            {t('auth.logout')}
+          </button>
+        </div>
+      )}
     </nav>
   );
 };

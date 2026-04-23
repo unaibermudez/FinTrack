@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/authMiddleware.js';
 import * as portfolioController from '../controllers/portfolioController.js';
 import * as transactionController from '../controllers/transactionController.js';
-import { getPortfolioPerformance } from '../controllers/performanceController.js';
+import { getPortfolioPerformance, getPortfoliosSummaryController } from '../controllers/performanceController.js';
 import { getPortfolioHistory } from '../controllers/historyController.js';
 import { importTransactions } from '../controllers/importController.js';
 
@@ -11,6 +11,7 @@ router.use(authenticate);
 
 router.get('/', portfolioController.getPortfolios);
 router.post('/', portfolioController.createPortfolio);
+router.get('/summary', getPortfoliosSummaryController);
 router.get('/:id', portfolioController.getPortfolio);
 router.put('/:id', portfolioController.updatePortfolio);
 router.delete('/:id', portfolioController.deletePortfolio);

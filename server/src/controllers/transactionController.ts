@@ -6,8 +6,16 @@ const param = (value: string | string[]): string =>
 
 export const getTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const transactions = await transactionService.getTransactions(param(req.params.id), req.userId);
-    res.json({ transactions });
+    const { symbol, type, sort, order, page, limit } = req.query as Record<string, string>;
+    const result = await transactionService.getTransactions(param(req.params.id), req.userId, {
+      symbol,
+      type,
+      sort,
+      order,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -28,6 +28,46 @@ export interface PerformanceResult {
   priceErrors?: string[];
 }
 
+export interface SummaryResult {
+  totalValue: number;
+  totalPl: number;
+  totalPlPercent: number;
+  portfolioCount: number;
+  holdingsCount: number;
+}
+
+export const getPortfoliosSummary = async (userId: string): Promise<SummaryResult> => {
+  const portfolios = await Portfolio.find({ userId });
+
+  const settled = await Promise.allSettled(
+    portfolios.map((p) => getPerformance(p._id.toString(), userId))
+  );
+
+  let totalValue = 0;
+  let totalCost = 0;
+  let holdingsCount = 0;
+
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      const { totalValue: val, totalPl: pl, holdings } = result.value;
+      totalValue += val;
+      totalCost += val - pl;
+      holdingsCount += holdings.filter((h) => !h.priceError).length;
+    }
+  }
+
+  const totalPl = totalValue - totalCost;
+  const totalPlPercent = totalCost > 0 ? (totalPl / totalCost) * 100 : 0;
+
+  return {
+    totalValue: parseFloat(totalValue.toFixed(2)),
+    totalPl: parseFloat(totalPl.toFixed(2)),
+    totalPlPercent: parseFloat(totalPlPercent.toFixed(2)),
+    portfolioCount: portfolios.length,
+    holdingsCount,
+  };
+};
+
 export const getPerformance = async (
   portfolioId: string,
   userId: string
